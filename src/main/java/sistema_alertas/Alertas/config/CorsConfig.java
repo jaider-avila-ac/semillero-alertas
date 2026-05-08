@@ -10,8 +10,11 @@ public class CorsConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-            .allowedOriginPatterns("*") 
-            .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+            .allowedOriginPatterns(
+                "http://localhost:*",
+                "https://alertas-sw.netlify.app"
+            )
+            .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
             .allowedHeaders("*")
             .allowCredentials(true);
     }
