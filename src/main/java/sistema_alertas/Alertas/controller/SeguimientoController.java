@@ -31,6 +31,12 @@ public class SeguimientoController {
     @Autowired
     private IAService iaService;
 
+    @GetMapping("/{id}")
+    public ResponseEntity<Seguimiento> obtenerPorId(@PathVariable Integer id) {
+        Optional<Seguimiento> resultado = seguimientoService.obtenerPorId(id);
+        return resultado.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @GetMapping("/consulta/{consultaId}")
     public ResponseEntity<Seguimiento> obtenerPorConsulta(@PathVariable Integer consultaId) {
         Optional<Seguimiento> resultado = seguimientoService.obtenerPorConsulta(consultaId);

@@ -6,7 +6,6 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import sistema_alertas.Alertas.model.Cita;
@@ -22,6 +21,7 @@ import sistema_alertas.Alertas.service.ConsultaService;
 import sistema_alertas.Alertas.service.ObservacionSeguimientoService;
 import sistema_alertas.Alertas.service.SeguimientoCitaService;
 import sistema_alertas.Alertas.service.SeguimientoService;
+import sistema_alertas.Alertas.service.WebSocketService;
 
 @RestController
 @RequestMapping(value = "/api/citas", produces = "application/json")
@@ -29,7 +29,7 @@ import sistema_alertas.Alertas.service.SeguimientoService;
 public class CitaController {
 
     @Autowired
-    private SimpMessagingTemplate webSocket;
+    private WebSocketService webSocketService;
 
     @Autowired
     private ConsultaService consultaService;
@@ -132,9 +132,12 @@ public ResponseEntity<?> agendarCitaParaConsultasPendientes(
     cita.setPsicorientador(psic);
 
     Cita citaGuardada = citaService.guardar(cita);
-    webSocket.convertAndSend("/tema/citas", citaGuardada);
+    webSocketService.enviarActualizacionCita(citaGuardada);
 
     for (Consulta c : consultasRelacionadas) {
+        // Guardar el estado actual antes de cambiarlo a en_cita
+        String estadoAnterior = c.getEstado() != null ? c.getEstado().name() : null;
+
         Optional<Seguimiento> existente = seguimientoService.obtenerPorConsulta(c.getId());
 
         if (existente.isEmpty()) {
@@ -144,20 +147,17 @@ public ResponseEntity<?> agendarCitaParaConsultasPendientes(
             s.setPsicorientador(psic);
             Seguimiento seguimientoGuardado = seguimientoService.guardar(s);
 
-            // Relación seguimiento - cita
-            seguimientoCitaService.guardarRelacion(citaGuardada.getId(), seguimientoGuardado.getId());
+            seguimientoCitaService.guardarRelacion(citaGuardada.getId(), seguimientoGuardado.getId(), estadoAnterior);
 
-            // Observación automática
             ObservacionSeguimiento obs = new ObservacionSeguimiento();
             obs.setSeguimiento(seguimientoGuardado);
             obs.setFecha(fecha);
             obs.setTexto("Seguimiento iniciado automáticamente al agendar cita");
             observacionSeguimientoService.guardar(obs);
         } else {
-            seguimientoCitaService.guardarRelacion(citaGuardada.getId(), existente.get().getId());
+            seguimientoCitaService.guardarRelacion(citaGuardada.getId(), existente.get().getId(), estadoAnterior);
         }
 
-        // Siempre actualizar el estado de la consulta a en_cita
         c.setEstado(ConsEstado.en_cita);
         consultaService.guardar(c);
     }
@@ -188,6 +188,7 @@ public ResponseEntity<?> agendarCitaParaConsultasPendientes(
         // 3. Cambiar estado de la cita a cancelada
         cita.setEstado(CitaEstado.cancelada);
         citaService.guardar(cita);
+        webSocketService.enviarActualizacionCita(cita);
 
         // 4. Obtener relaciones seguimiento - cita
         List<SeguimientoCita> relaciones = seguimientoCitaService.obtenerPorCitaId(id);
@@ -199,15 +200,18 @@ public ResponseEntity<?> agendarCitaParaConsultasPendientes(
                 Consulta consulta = seguimiento.getConsulta();
                 if (consulta != null && consulta.getEstado() == ConsEstado.en_cita) {
 
-                    // 5. Cambiar estado de la consulta a pendiente
-                    consulta.setEstado(ConsEstado.pendiente);
+                    // Restaurar el estado que tenía antes de ser vinculada a la cita
+                    String estadoAnteriorStr = relacion.getEstadoAnteriorConsulta();
+                    ConsEstado estadoRestaurado = (estadoAnteriorStr != null)
+                        ? ConsEstado.valueOf(estadoAnteriorStr)
+                        : ConsEstado.pendiente;
+                    consulta.setEstado(estadoRestaurado);
                     consultaService.guardar(consulta);
 
-                    // 6. Crear observación automática
                     ObservacionSeguimiento obs = new ObservacionSeguimiento();
                     obs.setSeguimiento(seguimiento);
                     obs.setFecha(new java.sql.Date(System.currentTimeMillis()));
-                    obs.setTexto("La cita fue cancelada. Seguimiento pendiente de reprogramación.");
+                    obs.setTexto("La cita fue cancelada. Consulta vuelve al estado: " + estadoRestaurado.name());
                     observacionSeguimientoService.guardar(obs);
                 }
             });
@@ -226,6 +230,7 @@ public ResponseEntity<?> agendarCitaParaConsultasPendientes(
 
             cita.setEstado(CitaEstado.valueOf(nuevoEstado.replace("\"", "")));
             citaService.guardar(cita);
+            webSocketService.enviarActualizacionCita(cita);
 
             return ResponseEntity.ok("Estado actualizado");
         } catch (IllegalArgumentException e) {

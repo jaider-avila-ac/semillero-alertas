@@ -11,7 +11,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.transaction.Transactional;
 import sistema_alertas.Alertas.model.Estudiante;
+import sistema_alertas.Alertas.model.Usuario;
 import sistema_alertas.Alertas.repository.EstudianteRepository;
+import sistema_alertas.Alertas.repository.UsuarioRepository;
 import sistema_alertas.Alertas.service.EstudianteService;
 
 import java.nio.file.*;
@@ -21,6 +23,9 @@ public class EstudianteServiceImpl implements EstudianteService {
 
     @Autowired
     private EstudianteRepository repository;
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
 
     @Override
     public List<Estudiante> obtenerTodos() {
@@ -73,7 +78,14 @@ public Estudiante actualizar(Integer id, Estudiante datos) {
     actual.setTipoVivienda(datos.getTipoVivienda());
     actual.setHuellaHash(datos.getHuellaHash());
 
-
+    // Sincronizar usuario vinculado si existe
+    if (actual.getUsuario() != null) {
+        Usuario u = actual.getUsuario();
+        u.setCedula(datos.getNroDoc());
+        u.setNombres(datos.getNombres() + " " + datos.getApellidos());
+        u.setCorreo(datos.getCorreo());
+        usuarioRepository.save(u);
+    }
 
     return repository.save(actual);
 }

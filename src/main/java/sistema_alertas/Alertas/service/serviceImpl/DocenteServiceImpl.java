@@ -54,22 +54,23 @@ public Docente guardar(Docente docente) {
         throw new RuntimeException("Ya existe un usuario con esa cédula");
     }
 
-    // Crear usuario asociado
+    // Guardar docente primero para obtener su ID generado
+    Docente guardado = repository.save(docente);
+
+    // Crear usuario con persona_id ya conocido
     Usuario usuario = new Usuario();
     usuario.setCedula(cedula);
-    usuario.setNombres(docente.getNombres() + " " + docente.getApellidos());
-    usuario.setCorreo(docente.getCorreo());
-    usuario.setRol(0); // 0 = docente
-    usuario.setPassword(passwordEncoder.encode(cedula)); // Contraseña encriptada igual a la cédula
+    usuario.setNombres(guardado.getNombres() + " " + guardado.getApellidos());
+    usuario.setCorreo(guardado.getCorreo());
+    usuario.setRol(0);
+    usuario.setPassword(passwordEncoder.encode(cedula));
+    usuario.setPersonaId(guardado.getId());
 
-    // Guardar usuario
     Usuario creado = usuarioRepository.save(usuario);
 
-    // Asociar el usuario al docente
-    docente.setUsuario(creado);
-
-    // Guardar docente
-    return repository.save(docente);
+    // Vincular usuario al docente
+    guardado.setUsuario(creado);
+    return repository.save(guardado);
 }
 
     @Override
@@ -78,15 +79,22 @@ public Docente guardar(Docente docente) {
         if (actual == null)
             return null;
 
-        Docente actualizado = new Docente(
-                datos.getTipoDoc(),
-                datos.getNroDoc(),
-                datos.getNombres(),
-                datos.getApellidos(),
-                datos.getCorreo());
+        actual.setTipoDoc(datos.getTipoDoc());
+        actual.setNroDoc(datos.getNroDoc());
+        actual.setNombres(datos.getNombres());
+        actual.setApellidos(datos.getApellidos());
+        actual.setCorreo(datos.getCorreo());
 
-        actualizado.setId(id);
-        return repository.save(actualizado);
+        // Sincronizar usuario vinculado si existe
+        if (actual.getUsuario() != null) {
+            Usuario u = actual.getUsuario();
+            u.setCedula(datos.getNroDoc());
+            u.setNombres(datos.getNombres() + " " + datos.getApellidos());
+            u.setCorreo(datos.getCorreo());
+            usuarioRepository.save(u);
+        }
+
+        return repository.save(actual);
     }
 
     @Override

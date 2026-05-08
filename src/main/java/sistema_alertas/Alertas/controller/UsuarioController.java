@@ -54,7 +54,7 @@ public class UsuarioController {
             @RequestParam int rol) {
 
         if (usuarioRepository.existsByCedula(cedula)) {
-            return ResponseEntity.badRequest().body("El usuario ya existe.");
+            return ResponseEntity.status(409).body("El usuario ya existe.");
         }
 
         Usuario usuario = new Usuario();

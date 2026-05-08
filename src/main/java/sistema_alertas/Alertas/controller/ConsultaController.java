@@ -81,7 +81,11 @@ public class ConsultaController {
             return ResponseEntity.badRequest().body("Docente no encontrado");
         }
 
-        if (docente.getUsuario() == null || docente.getUsuario().getRol() != 1) {
+        System.out.println("[DEBUG] docente.id=" + docente.getId()
+            + " usuario=" + (docente.getUsuario() != null ? docente.getUsuario().getId() : "NULL")
+            + " rol=" + (docente.getUsuario() != null ? docente.getUsuario().getRol() : "NULL"));
+
+        if (docente.getUsuario() == null || docente.getUsuario().getRol() != 0) {
             return ResponseEntity.status(403).body("Solo los docentes pueden crear alertas");
         }
 

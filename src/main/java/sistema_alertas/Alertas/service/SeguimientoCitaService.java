@@ -9,5 +9,5 @@ public interface SeguimientoCitaService {
     List<SeguimientoCita> obtenerPorSeguimientoId(Integer seguimientoId);
 
 
-    void guardarRelacion(Integer citaId, Integer seguimientoId);
+    void guardarRelacion(Integer citaId, Integer seguimientoId, String estadoAnteriorConsulta);
 }

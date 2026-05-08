@@ -23,6 +23,9 @@ public class SeguimientoCita {
     @Column(name = "SEGU_ID")
     private Integer seguimientoId;
 
+    @Column(name = "CONS_ESTADO_ANTERIOR")
+    private String estadoAnteriorConsulta;
+
     public SeguimientoCita() {}
 
     public SeguimientoCita(Integer citaId, Integer seguimientoId) {

@@ -56,16 +56,20 @@ public class PsicorientadorServiceImpl implements PsicorientadorService {
                 psic.setUsuario(existente);
             }
         } else {
-            // Crear nuevo usuario
+            // Guardar psicorientador primero para obtener su ID generado
+            Psicorientador guardado = repository.save(psic);
+
             Usuario nuevo = new Usuario();
             nuevo.setCedula(cedula);
-            nuevo.setNombres(psic.getNombres() + " " + psic.getApellidos());
-            nuevo.setCorreo(psic.getCorreo());
-            nuevo.setRol(2); // 2 = psicorientador
+            nuevo.setNombres(guardado.getNombres() + " " + guardado.getApellidos());
+            nuevo.setCorreo(guardado.getCorreo());
+            nuevo.setRol(2);
             nuevo.setPassword(passwordEncoder.encode(cedula));
+            nuevo.setPersonaId(guardado.getId());
 
             Usuario creado = usuarioRepository.save(nuevo);
-            psic.setUsuario(creado);
+            guardado.setUsuario(creado);
+            return repository.save(guardado);
         }
 
         return repository.save(psic);
@@ -81,6 +85,15 @@ public class PsicorientadorServiceImpl implements PsicorientadorService {
         actual.setNombres(datos.getNombres());
         actual.setApellidos(datos.getApellidos());
         actual.setCorreo(datos.getCorreo());
+
+        // Sincronizar usuario vinculado si existe
+        if (actual.getUsuario() != null) {
+            Usuario u = actual.getUsuario();
+            u.setCedula(datos.getNroDoc());
+            u.setNombres(datos.getNombres() + " " + datos.getApellidos());
+            u.setCorreo(datos.getCorreo());
+            usuarioRepository.save(u);
+        }
 
         return repository.save(actual);
     }

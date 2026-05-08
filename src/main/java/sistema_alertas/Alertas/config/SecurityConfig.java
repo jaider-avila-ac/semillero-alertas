@@ -30,11 +30,14 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
+                    "/api/ping",
                     "/api/usuarios/login",
                     "/api/usuarios/generar",
                     "/api/usuarios/generar-masivo",
-                            "/api/sugerencias",
-                            "/api/sugerencias/**" 
+                    "/api/sugerencias",
+                    "/api/sugerencias/**",
+                    "/ws",
+                    "/ws/**"
                 ).permitAll()
                 .anyRequest().authenticated()
             )

@@ -26,10 +26,11 @@ public class SeguimientoCitaServiceImpl implements SeguimientoCitaService {
 
 
     @Override
-    public void guardarRelacion(Integer citaId, Integer seguimientoId) {
+    public void guardarRelacion(Integer citaId, Integer seguimientoId, String estadoAnteriorConsulta) {
         SeguimientoCita relacion = new SeguimientoCita();
         relacion.setCitaId(citaId);
         relacion.setSeguimientoId(seguimientoId);
+        relacion.setEstadoAnteriorConsulta(estadoAnteriorConsulta);
         seguimientoCitaRepository.save(relacion);
     }
 }
